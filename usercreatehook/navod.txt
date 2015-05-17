@@ -1,0 +1,116 @@
+1) Nakonfigurovat Liferay 6.1 (dalej LR) a spustit/restartovat ho.
+
+Nutne je spravne nakonfigurovat posielanie emailov z LR z dovodu, ze pri vytvarani konta pouzivatel dostane vygenerovane heslo,
+ktore mu LR zasle emailom.
+
+Sucastou konfiguracie LR je vytvorenie role 'matlab', ktora bude mapovat rolu s rovnakym nazvom v MidPoint-e:
+LR GUI (ako administrator): Go to -> Control Panel -> Portal -> Roles -> Add -> Regular Role -> Name: matlab
+
+Treba nakonfigurat povinnu zmenu hesla (po vygenerovani) a aby sa neposielal verifikacny email po zalozeni konta:
+Portal -> Password Policies ->  Default Password Policy -> General -> Change Required (zaskrtnut)
+Portal -> Portal Settings -> Authentication -> General -> Require strangers to verify their email addresses? (odskrtnut)
+
+Dalej je v LR treba zadefinovat strukturu organizacie/suborganizacie, ktore sa zadavaju pri registracii noveho pouzivatela.
+Portal -> Users and Organizations -> Add -> Regular Organization (pre suborganizaciu nastavit prislusnu Parent Organization)
+
+Taktiez je vhodne nakonfigurovat defaultny jazyk a casovu zonu v nastaveniach LR:
+Control panel -> Portal settings -> Display settings
+
+Dalej je vhodne nakonfigurovat texty emailovych notifikacii v LR:
+Control panel -> Portal settings -> Email Notifications
+
+Priklad portal-ext.properties (liferay-portal-6.1.1-ce-ga2\tomcat-7.0.27\webapps\ROOT\WEB-INF\classes\portal-ext.properties) 
+- minimalna nutna konfiguracia, aby portal fungoval podla poziadaviek:
+------------------------------------------------------------------------------------------------------------------------------
+#portal-ext.properties
+# MUSI BYT NASTAVENE ABY HOOK FUNGOVAL KOREKTNE - ZACIATOK
+jdbc.default.jndi.name=jdbc/LiferayPool
+
+# emailove udaje administratora, vhodne nastavit
+admin.email.from.name=IS Admin
+admin.email.from.address=admin@example.com
+
+# prihlasovanie prihlasovacim menom
+company.security.auth.type=screenName
+
+live.users.enabled=true
+
+# ak true, verifikacny kod sa posiela pouzivatelovi mailom.
+company.security.strangers.verify=false
+
+# pravidla pre zadavanie hesla
+passwords.regexptoolkit.pattern=(?=.{8})(?:[a-zA-Z0-9 |:\"'<>,.?;/~!@#`$%^&*_+=-]*)
+passwords.toolkit=com.liferay.portal.security.pwd.RegExpToolkit
+
+# defaultne role novovytvoreneho pouzivatela
+admin.default.role.names=User\nPower User
+
+# priezvisko je pri registracii povinne
+users.last.name.required=true
+
+# vypnutie 'reminder' otazok
+users.reminder.queries.enabled=false
+
+# aby si pouzivatel nemohol menit prihlasovanice meno a emailovu adresu. povodne hodnoty: 'administrator,user-with-mx,user-without-mx'
+field.editable.com.liferay.portal.model.User.screenName=administrator
+field.editable.com.liferay.portal.model.User.emailAddress=administrator
+# MUSI BYT NASTAVENE ABY HOOK FUNGOVAL KOREKTNE - KONIEC
+
+
+------------------------------------------------------------------------------------------------------------------------------
+
+2) Nastavit v pom.xml na riadku 82 premennu ${liferay.auto.deploy.dir}, napr.:
+
+		<liferay.auto.deploy.dir>c:/apps/java/liferay-portal-6.1.1-ce-ga2/deploy</liferay.auto.deploy.dir>
+
+3) Spustit maven_lib\install_lib.bat pre pridanie WS objektov - neskor ma byt nahradene pridanim zavislosti do pom.xml
+
+4) nakonfigurovat webservisy a ine parametre v usercreatehook\pom.xml v prislusnom profile (local, prod)
+Priklad konfiguracie WS:
+------------------------------------------------------------------------------------------------------------------------------
+	...
+	<profiles>
+		<profile>
+			<id>local</id>
+			<activation>
+				<activeByDefault>true</activeByDefault>
+				<property>
+					<name>profile</name>
+					<value>local</value>
+				</property>
+			</activation>
+			<properties>
+				<ws.endpoint.url>http://localhost:8080/midpoint/model/model-1</ws.endpoint.url>
+				<ws.user>administrator</ws.user>
+				<ws.password>xxx</ws.password>
+				<midpoint.password.min.unique.chars>3</midpoint.password.min.unique.chars>
+				<email.domains.allways.permitted>eea.sk,evolveum.sk,evolveum.com</email.domains.allways.permitted>
+			</properties>
+		</profile>
+	...
+------------------------------------------------------------------------------------------------------------------------------
+
+5) Spustit build.bat (build+deploy war), resp. build-prod.bat (len build war pre produkciu)
+
+6) Pre vytvorenie Eclipse projektu spustit build-eclipse.bat
+
+7) Pouzitie - v internetovom prehlidaci uvodna stranka LR (napr. 'http://localhost:8080') -> Sign In -> Create Account
+
+POZNAMKY:
+
+Ak je hook deploynuty korektne, mala by sa zobrazit prisposobena obrazovka pre vytvaranie konta, ktora naviac obsahuje organizaciu (univerzita) a suborganizaciu (fakulta).
+Ak vsetko funguje spravne, tak po vyplneni registracneho formulara dostane novy pouzivatel email s vygenerovanym heslom. Po prihlaseni je vyzvany na zmenu hesla,
+ktora ked prebehne uspesne, tak sa nasledne zalozi s udajmi z LR v MidPoint-e pomocou volaniu webservisu.
+Dalsie LR akcie, kedy sa volaju funkcie MidPoint-u su:
+-zmena hesla
+-zmena role (pridanie, ubranie)
+-zmena mena a/alebo priezviska pouzivatela
+
+V pripade, ze volanie MidPointu zlyha, alebo pridu neocakavane data, chyba sa zaloguje do LR logov (napr. '<liferay_directory>/logs/liferay.yyyy-dd-mm.log')
+a je o tomto zaslany informacny mail administratovori LR (emailova adresa z konfiguracneho parametra 'admin.email.from.address').
+
+Pouzivatel si nemoze menit svoje prihlasovacie meno a emailovu adresu. Moze to urobit LR admin, tieto udaje sa vsak NEPRENESU automaticky do MidPoint-u - synchronizaciu
+tychto dat treba vtedy urobit rucne.
+
+Ak je zadana POP3 emailova adresa (Server Administration -> Mail), nie je mozne vytvorit pouzivatela s takouto adresou (a ani nie je mozne ulozit pouzivatela 
+s takouto emailovou adresou pri editacii).

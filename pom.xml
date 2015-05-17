@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	
+	<groupId>sk.eea.cvti</groupId>
+	<artifactId>CVTILR</artifactId>
+	<packaging>pom</packaging>
+	<name>Root POM</name>
+	<description>Root POM for LR for CVTI ISS</description>
+	<version>1.0</version>
+
+	<organization>
+		<name>CVIT</name>
+		<url>iss.cvtisr.sk</url>
+	</organization>
+	
+	<developers>
+		<developer>
+			<id>spa</id>
+			<name>Stanislav Parnicky</name>
+			<email>Stanislav.Parnicky@eea.sk</email>
+			<organization>EEA s.r.o.</organization>
+			<organizationUrl>www.eea.sk</organizationUrl>
+		</developer>
+	</developers>
+
+	<modules>
+		<module>usercreatehook</module>
+	</modules>
+
+	<properties>
+		<liferay.auto.deploy.dir>c:/apps/java/liferay-portal-6.1.1-ce-ga2/deploy</liferay.auto.deploy.dir>
+		<liferay.version>6.1.1</liferay.version>
+	</properties>
+
+</project>
