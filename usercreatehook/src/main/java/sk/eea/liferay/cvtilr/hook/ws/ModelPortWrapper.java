@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 
 import javax.xml.bind.JAXBElement;
+import javax.xml.bind.JAXBException;
 import javax.xml.namespace.QName;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -21,8 +22,8 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.Validate;
 import org.apache.cxf.frontend.ClientProxy;
 import org.apache.cxf.ws.security.wss4j.WSS4JOutInterceptor;
-import org.apache.ws.security.WSConstants;
-import org.apache.ws.security.handler.WSHandlerConstants;
+import org.apache.wss4j.dom.WSConstants;
+import org.apache.wss4j.dom.handler.WSHandlerConstants;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
@@ -32,25 +33,36 @@ import org.xml.sax.SAXException;
 import sk.eea.liferay.cvtilr.hook.exception.WSException;
 import sk.eea.liferay.cvtilr.hook.service.CustomUserLocalServiceImpl;
 
-import com.evolveum.midpoint.xml.ns._public.common.api_types_2.ObjectListType;
-import com.evolveum.midpoint.xml.ns._public.common.api_types_2.ObjectModificationType;
-import com.evolveum.midpoint.xml.ns._public.common.api_types_2.OperationOptionsType;
-import com.evolveum.midpoint.xml.ns._public.common.common_2a.AssignmentType;
-import com.evolveum.midpoint.xml.ns._public.common.common_2a.CredentialsType;
-import com.evolveum.midpoint.xml.ns._public.common.common_2a.ObjectReferenceType;
-import com.evolveum.midpoint.xml.ns._public.common.common_2a.ObjectType;
-import com.evolveum.midpoint.xml.ns._public.common.common_2a.OperationResultType;
-import com.evolveum.midpoint.xml.ns._public.common.common_2a.PasswordType;
-import com.evolveum.midpoint.xml.ns._public.common.common_2a.ProtectedStringType;
-import com.evolveum.midpoint.xml.ns._public.common.common_2a.RoleType;
-import com.evolveum.midpoint.xml.ns._public.common.common_2a.UserType;
-import com.evolveum.midpoint.xml.ns._public.common.fault_1_wsdl.FaultMessage;
-import com.evolveum.midpoint.xml.ns._public.model.model_1_wsdl.ModelPortType;
-import com.evolveum.midpoint.xml.ns._public.model.model_1_wsdl.ModelService;
-import com.evolveum.prism.xml.ns._public.query_2.QueryType;
-import com.evolveum.prism.xml.ns._public.types_2.ItemDeltaType;
-import com.evolveum.prism.xml.ns._public.types_2.ModificationTypeType;
-import com.evolveum.prism.xml.ns._public.types_2.PolyStringType;
+import com.evolveum.midpoint.model.client.ModelClientUtil;
+import com.evolveum.midpoint.xml.ns._public.common.api_types_3.ObjectDeltaListType;
+import com.evolveum.midpoint.xml.ns._public.common.api_types_3.ObjectDeltaOperationListType;
+import com.evolveum.midpoint.xml.ns._public.common.api_types_3.ObjectListType;
+import com.evolveum.midpoint.xml.ns._public.common.api_types_3.ObjectModificationType;
+import com.evolveum.midpoint.xml.ns._public.common.api_types_3.SelectorQualifiedGetOptionsType;
+import com.evolveum.midpoint.xml.ns._public.common.common_3.ActivationStatusType;
+import com.evolveum.midpoint.xml.ns._public.common.common_3.ActivationType;
+import com.evolveum.midpoint.xml.ns._public.common.common_3.AssignmentType;
+import com.evolveum.midpoint.xml.ns._public.common.common_3.CredentialsType;
+import com.evolveum.midpoint.xml.ns._public.common.common_3.ObjectDeltaOperationType;
+import com.evolveum.midpoint.xml.ns._public.common.common_3.ObjectReferenceType;
+import com.evolveum.midpoint.xml.ns._public.common.common_3.ObjectType;
+import com.evolveum.midpoint.xml.ns._public.common.common_3.OperationResultType;
+import com.evolveum.midpoint.xml.ns._public.common.common_3.PasswordType;
+import com.evolveum.midpoint.xml.ns._public.common.common_3.RoleType;
+import com.evolveum.midpoint.xml.ns._public.common.common_3.TimeIntervalStatusType;
+import com.evolveum.midpoint.xml.ns._public.common.common_3.UserType;
+import com.evolveum.midpoint.xml.ns._public.common.fault_3.FaultMessage;
+import com.evolveum.midpoint.xml.ns._public.model.model_3.ModelPortType;
+import com.evolveum.midpoint.xml.ns._public.model.model_3.ModelService;
+import com.evolveum.prism.xml.ns._public.query_3.QueryType;
+import com.evolveum.prism.xml.ns._public.query_3.SearchFilterType;
+import com.evolveum.prism.xml.ns._public.types_3.ChangeTypeType;
+import com.evolveum.prism.xml.ns._public.types_3.ItemDeltaType;
+import com.evolveum.prism.xml.ns._public.types_3.ItemPathType;
+import com.evolveum.prism.xml.ns._public.types_3.ModificationTypeType;
+import com.evolveum.prism.xml.ns._public.types_3.ObjectDeltaType;
+import com.evolveum.prism.xml.ns._public.types_3.PolyStringType;
+import com.evolveum.prism.xml.ns._public.types_3.ProtectedStringType;
 import com.liferay.portal.kernel.log.Log;
 import com.liferay.portal.kernel.log.LogFactoryUtil;
 
@@ -62,16 +74,20 @@ public class ModelPortWrapper {
 
     private static final Log LOG = LogFactoryUtil.getLog(ModelPortWrapper.class);
 
-    public static final String NS_COMMON = "http://midpoint.evolveum.com/xml/ns/public/common/common-2a";
+    public static final String NS_COMMON = "http://midpoint.evolveum.com/xml/ns/public/common/common-3";
     private static final QName COMMON_PATH = new QName(NS_COMMON, "path");
     private static final QName COMMON_VALUE = new QName(NS_COMMON, "value");
     private static final QName COMMON_ASSIGNMENT = new QName(NS_COMMON, "assignment");
 
-    private static final QName COMMON_FULL_NAME = new QName(NS_COMMON, "fullName");
-    private static final QName COMMON_GIVEN_NAME = new QName(NS_COMMON, "givenName");
-    private static final QName COMMON_FAMILY_NAME = new QName(NS_COMMON, "familyName");
+    private static final String FULL_NAME = "fullName";
+    private static final String GIVEN_NAME = "givenName";
+    private static final String FAMILY_NAME = "familyName";
+    private static final String ASSIGNMENT = "assignment";
 
-    public static final String NS_TYPES = "http://prism.evolveum.com/xml/ns/public/types-2";
+    private static final String NS_TYPES = "http://prism.evolveum.com/xml/ns/public/types-3";
+    private static final QName TYPES_CLEAR_VALUE = new QName(NS_TYPES, "clearValue");
+    
+    
     private static final QName TYPES_POLYSTRING_ORIG = new QName(NS_TYPES, "orig");
 
     private static ModelPortType modelPortType;
@@ -163,41 +179,51 @@ public class ModelPortWrapper {
             String newFullName) throws FaultMessage {
         Document doc = getDocumnent();
 
-        ObjectModificationType userDelta = new ObjectModificationType();
+        ObjectDeltaType userDelta = new ObjectDeltaType();
         userDelta.setOid(oid);
+        userDelta.setObjectType(ModelClientUtil.getTypeQName(UserType.class));
+        userDelta.setChangeType(ChangeTypeType.MODIFY);
 
         if (newFirstName != null) {
             ItemDeltaType nameDelta = new ItemDeltaType();
             nameDelta.setModificationType(ModificationTypeType.REPLACE);
-            ItemDeltaType.Value nameValue = new ItemDeltaType.Value();
-            nameValue.getAny().add(toJaxbElement(COMMON_GIVEN_NAME, createPolyStringType(newFirstName, doc)));
-            nameDelta.setValue(nameValue);
-            userDelta.getModification().add(nameDelta);
+            nameDelta.setPath(createItemPathType(GIVEN_NAME));
+            nameDelta.getValue().add(createPolyStringType(newFirstName, doc));
+            userDelta.getItemDelta().add(nameDelta);
         }
 
         if (newLastName != null) {
             ItemDeltaType nameDelta = new ItemDeltaType();
             nameDelta.setModificationType(ModificationTypeType.REPLACE);
-            ItemDeltaType.Value nameValue = new ItemDeltaType.Value();
-            nameValue.getAny().add(toJaxbElement(COMMON_FAMILY_NAME, createPolyStringType(newLastName, doc)));
-            nameDelta.setValue(nameValue);
-            userDelta.getModification().add(nameDelta);
+            nameDelta.setPath(createItemPathType(FAMILY_NAME));
+            nameDelta.getValue().add(createPolyStringType(newLastName, doc));
+            userDelta.getItemDelta().add(nameDelta);
         }
 
         if (newFullName != null) {
             ItemDeltaType nameDelta = new ItemDeltaType();
             nameDelta.setModificationType(ModificationTypeType.REPLACE);
-            ItemDeltaType.Value nameValue = new ItemDeltaType.Value();
-            nameValue.getAny().add(toJaxbElement(COMMON_FULL_NAME, createPolyStringType(newFullName, doc)));
-            nameDelta.setValue(nameValue);
-            userDelta.getModification().add(nameDelta);
+            nameDelta.setPath(createItemPathType(FULL_NAME));
+            nameDelta.getValue().add(createPolyStringType(newFullName, doc));
+            userDelta.getItemDelta().add(nameDelta);
         }
-
-        modelPort.modifyObject(getTypeUri(UserType.class), userDelta);
+        
+        ObjectDeltaListType deltaList = new ObjectDeltaListType();
+        deltaList.getDelta().add(userDelta);
+        
+        modelPort.executeChanges(deltaList, null);
     }
 
     private static void deleteUser(ModelPortType modelPort, String oid) throws FaultMessage {
-        modelPort.deleteObject(getTypeUri(UserType.class), oid);
+    	 ObjectDeltaType deltaType = new ObjectDeltaType();
+         deltaType.setObjectType(ModelClientUtil.getTypeQName(UserType.class));
+         deltaType.setChangeType(ChangeTypeType.DELETE);
+         deltaType.setOid(oid);
+
+         ObjectDeltaListType deltaListType = new ObjectDeltaListType();
+         deltaListType.getDelta().add(deltaType);
+
+         modelPort.executeChanges(deltaListType, null);
     }
 
     /**
@@ -243,7 +269,7 @@ public class ModelPortWrapper {
     }
 
     private static List<RoleType> getRoleTypesForLiferayRoles(ModelPortType modelPort, List<String> roles)
-            throws FaultMessage, SAXException, IOException {
+            throws FaultMessage, SAXException, IOException, JAXBException {
         List<RoleType> roleTypes = new ArrayList<RoleType>();
         if (roles != null) {
             for (String roleName : roles) {
@@ -391,6 +417,10 @@ public class ModelPortWrapper {
         user.setGivenName(createPolyStringType(firstName, doc));
         user.setFamilyName(createPolyStringType(lastName, doc));
         user.setEmailAddress(email);
+        ActivationType activation = new ActivationType();
+        activation.setAdministrativeStatus(ActivationStatusType.ENABLED);
+        user.setActivation(activation);
+        
         if (!StringUtils.isBlank(organizationName)) {
             user.getOrganization().add(createPolyStringType(organizationName, doc));
         }
@@ -404,11 +434,44 @@ public class ModelPortWrapper {
         // handle roles
         assignRoleTypesToUser(user, roleTypes);
 
-        Holder<String> oidHolder = new Holder<String>();
-        Holder<OperationResultType> resultHolder = new Holder<OperationResultType>();
-        modelPort.addObject(user, oidHolder, resultHolder);
+        ObjectDeltaType deltaType = new ObjectDeltaType();
+        deltaType.setObjectType(ModelClientUtil.getTypeQName(UserType.class));
+        deltaType.setChangeType(ChangeTypeType.ADD);
+        deltaType.setObjectToAdd(user);
 
-        return oidHolder.value;
+        ObjectDeltaListType deltaListType = new ObjectDeltaListType();
+        deltaListType.getDelta().add(deltaType);
+		ObjectDeltaOperationListType operationListType = modelPort.executeChanges(deltaListType, null);
+        
+     
+        return getOidFromDeltaOperationList(operationListType, deltaType);
+    }
+    
+    public static String getOidFromDeltaOperationList(ObjectDeltaOperationListType operationListType, ObjectDeltaType originalDelta) {
+        ObjectDeltaOperationType odo = findInDeltaOperationList(operationListType, originalDelta);
+        return odo != null ? ((ObjectType) odo.getObjectDelta().getObjectToAdd()).getOid() : null;
+    }
+    
+    public static ObjectDeltaOperationType findInDeltaOperationList(ObjectDeltaOperationListType operationListType, ObjectDeltaType originalDelta) {
+        Validate.notNull(operationListType);
+        Validate.notNull(originalDelta);
+        if (originalDelta.getChangeType() != ChangeTypeType.ADD) {
+            throw new IllegalArgumentException("Original delta is not of ADD type");
+        }
+        if (originalDelta.getObjectToAdd() == null) {
+            throw new IllegalArgumentException("Original delta contains no object-to-be-added");
+        }
+        for (ObjectDeltaOperationType operationType : operationListType.getDeltaOperation()) {
+            ObjectDeltaType objectDeltaType = operationType.getObjectDelta();
+            if (objectDeltaType.getChangeType() == ChangeTypeType.ADD &&
+                    objectDeltaType.getObjectToAdd() != null) {
+                ObjectType objectAdded = (ObjectType) objectDeltaType.getObjectToAdd();
+                if (objectAdded.getClass().equals(originalDelta.getObjectToAdd().getClass())) {
+                    return operationType;
+                }
+            }
+        }
+        return null;
     }
 
     private static void assignRoleTypesToUser(UserType user, List<RoleType> roleTypes) {
@@ -430,18 +493,20 @@ public class ModelPortWrapper {
     private static void changeUserPassword(ModelPortType modelPort, String oid, String newPassword) throws FaultMessage {
         Document doc = getDocumnent();
 
-        ObjectModificationType userDelta = new ObjectModificationType();
-        userDelta.setOid(oid);
-
         ItemDeltaType passwordDelta = new ItemDeltaType();
-        passwordDelta.setModificationType(ModificationTypeType.REPLACE);
-        passwordDelta.setPath(createPathElement("credentials/password", doc));
-        ItemDeltaType.Value passwordValue = new ItemDeltaType.Value();
-        passwordValue.getAny().add(toJaxbElement(COMMON_VALUE, createProtectedString(newPassword)));
-        passwordDelta.setValue(passwordValue);
-        userDelta.getModification().add(passwordDelta);
+		passwordDelta.setModificationType(ModificationTypeType.REPLACE);
+		passwordDelta.setPath(createItemPathType("credentials/password/value"));
+        passwordDelta.getValue().add(createProtectedString(newPassword));
 
-        modelPort.modifyObject(getTypeUri(UserType.class), userDelta);
+        ObjectDeltaType userDelta = new ObjectDeltaType();
+        userDelta.setObjectType(ModelClientUtil.getTypeQName(UserType.class));
+        userDelta.setChangeType(ChangeTypeType.MODIFY);
+        userDelta.setOid(oid);
+        userDelta.getItemDelta().add(passwordDelta);
+
+        ObjectDeltaListType deltaListType = new ObjectDeltaListType();
+        deltaListType.getDelta().add(userDelta);
+        modelPort.executeChanges(deltaListType, null);
     }
 
     private static void assignRoles(ModelPortType modelPort, String userOid, List<String> roleOids) throws FaultMessage {
@@ -458,23 +523,29 @@ public class ModelPortWrapper {
             boolean isAdd,
             List<String> roleOids) throws FaultMessage {
 
-        ObjectModificationType userDelta = new ObjectModificationType();
-        userDelta.setOid(userOid);
+    	 ItemDeltaType assignmentDelta = new ItemDeltaType();
+         if (isAdd) {
+             assignmentDelta.setModificationType(ModificationTypeType.ADD);
+         } else {
+             assignmentDelta.setModificationType(ModificationTypeType.DELETE);
+         }
+         
+         assignmentDelta.setPath(ModelClientUtil.createItemPathType(ASSIGNMENT));
+         
+         for (String roleOid : roleOids) {
+         	assignmentDelta.getValue().add(createRoleAssignment(roleOid));
+         }
+         
+         ObjectDeltaType userDelta = new ObjectDeltaType();
+         userDelta.setObjectType(ModelClientUtil.getTypeQName(UserType.class));
+         userDelta.setChangeType(ChangeTypeType.MODIFY);
+         userDelta.setOid(userOid);
+         userDelta.getItemDelta().add(assignmentDelta);
 
-        ItemDeltaType assignmentDelta = new ItemDeltaType();
-        if (isAdd) {
-            assignmentDelta.setModificationType(ModificationTypeType.ADD);
-        } else {
-            assignmentDelta.setModificationType(ModificationTypeType.DELETE);
-        }
-        ItemDeltaType.Value assignmentValue = new ItemDeltaType.Value();
-        for (String roleOid : roleOids) {
-            assignmentValue.getAny().add(toJaxbElement(COMMON_ASSIGNMENT, createRoleAssignment(roleOid)));
-        }
-        assignmentDelta.setValue(assignmentValue);
-        userDelta.getModification().add(assignmentDelta);
+         ObjectDeltaListType deltaListType = new ObjectDeltaListType();
+         deltaListType.getDelta().add(userDelta);
 
-        modelPort.modifyObject(getTypeUri(UserType.class), userDelta);
+         modelPort.executeChanges(deltaListType, null);
     }
 
     private static AssignmentType createRoleAssignment(String roleOid) {
@@ -487,18 +558,22 @@ public class ModelPortWrapper {
     }
 
     private static UserType searchUserByName(ModelPortType modelPort, String username) throws SAXException,
-            IOException, FaultMessage {
+            IOException, FaultMessage, JAXBException {
         // WARNING: in a real case make sure that the username is properly escaped before putting it in XML
-        Element filter = parseElement("<equal xmlns='http://prism.evolveum.com/xml/ns/public/query-2' xmlns:c='http://midpoint.evolveum.com/xml/ns/public/common/common-2a' >"
-                + "<path>c:name</path>" + "<value>" + username + "</value>" + "</equal>");
-        QueryType query = new QueryType();
-        query.setFilter(filter);
-        OperationOptionsType options = new OperationOptionsType();
+    	SearchFilterType filter = ModelClientUtil.parseSearchFilterType(
+				"<equal xmlns='http://prism.evolveum.com/xml/ns/public/query-3' xmlns:c='http://midpoint.evolveum.com/xml/ns/public/common/common-3' >" +
+				  "<path>c:name</path>" +
+				  "<value>" + username + "</value>" +
+				"</equal>"
+		);
+		QueryType query = new QueryType();
+		query.setFilter(filter);
+		SelectorQualifiedGetOptionsType options = new SelectorQualifiedGetOptionsType();
         Holder<ObjectListType> objectListHolder = new Holder<ObjectListType>();
         Holder<OperationResultType> resultHolder = new Holder<OperationResultType>();
 
-        modelPort.searchObjects(getTypeUri(UserType.class), query, options, objectListHolder, resultHolder);
-
+        modelPort.searchObjects(getTypeQName(UserType.class), query, options, objectListHolder, resultHolder);
+        
         ObjectListType objectList = objectListHolder.value;
         List<ObjectType> objects = objectList.getObject();
         if (objects.isEmpty()) {
@@ -512,17 +587,21 @@ public class ModelPortWrapper {
     }
 
     private static RoleType searchRoleByName(ModelPortType modelPort, String roleName) throws SAXException,
-            IOException, FaultMessage {
+            IOException, FaultMessage, JAXBException {
         // WARNING: in a real case make sure that the username is properly escaped before putting it in XML
-        Element filter = parseElement("<equal xmlns='http://prism.evolveum.com/xml/ns/public/query-2' xmlns:c='http://midpoint.evolveum.com/xml/ns/public/common/common-2a' >"
-                + "<path>c:name</path>" + "<value>" + roleName + "</value>" + "</equal>");
-        QueryType query = new QueryType();
-        query.setFilter(filter);
-        OperationOptionsType options = new OperationOptionsType();
+    	SearchFilterType filter = ModelClientUtil.parseSearchFilterType(
+				"<equal xmlns='http://prism.evolveum.com/xml/ns/public/query-3' xmlns:c='http://midpoint.evolveum.com/xml/ns/public/common/common-3' >" +
+				  "<path>c:name</path>" +
+				  "<value>" + roleName + "</value>" +
+				"</equal>"
+		);
+		QueryType query = new QueryType();
+		query.setFilter(filter);
+        SelectorQualifiedGetOptionsType options = new SelectorQualifiedGetOptionsType();
         Holder<ObjectListType> objectListHolder = new Holder<ObjectListType>();
         Holder<OperationResultType> resultHolder = new Holder<OperationResultType>();
 
-        modelPort.searchObjects(getTypeUri(RoleType.class), query, options, objectListHolder, resultHolder);
+        modelPort.searchObjects(getTypeQName(RoleType.class), query, options, objectListHolder, resultHolder);
 
         ObjectListType objectList = objectListHolder.value;
         List<ObjectType> objects = objectList.getObject();
@@ -538,16 +617,20 @@ public class ModelPortWrapper {
 
     @SuppressWarnings({"unchecked", "rawtypes"})
     private static Collection<RoleType> listRequestableRoles(ModelPortType modelPort) throws SAXException, IOException,
-            FaultMessage {
-        Element filter = parseElement("<equal xmlns='http://prism.evolveum.com/xml/ns/public/query-2' xmlns:c='http://midpoint.evolveum.com/xml/ns/public/common/common-2a' >"
-                + "<path>c:requestable</path>" + "<value>true</value>" + "</equal>");
-        QueryType query = new QueryType();
-        query.setFilter(filter);
-        OperationOptionsType options = new OperationOptionsType();
+            FaultMessage, JAXBException {
+    	SearchFilterType filter = ModelClientUtil.parseSearchFilterType(
+				"<equal xmlns='http://prism.evolveum.com/xml/ns/public/query-3' xmlns:c='http://midpoint.evolveum.com/xml/ns/public/common/common-3' >" +
+				  "<path>c:requestable</path>" +
+				  "<value>true</value>" +
+				"</equal>"
+		);
+		QueryType query = new QueryType();
+		query.setFilter(filter);
+        SelectorQualifiedGetOptionsType options = new SelectorQualifiedGetOptionsType();
         Holder<ObjectListType> objectListHolder = new Holder<ObjectListType>();
         Holder<OperationResultType> resultHolder = new Holder<OperationResultType>();
 
-        modelPort.searchObjects(getTypeUri(RoleType.class), query, options, objectListHolder, resultHolder);
+        modelPort.searchObjects(getTypeQName(RoleType.class), query, options, objectListHolder, resultHolder);
 
         ObjectListType objectList = objectListHolder.value;
         return (Collection) objectList.getObject();
@@ -627,9 +710,10 @@ public class ModelPortWrapper {
     }
 
     private static ProtectedStringType createProtectedString(String clearValue) {
-        ProtectedStringType protectedString = new ProtectedStringType();
-        protectedString.setClearValue(clearValue);
-        return protectedString;
+    	ProtectedStringType protectedString = new ProtectedStringType();
+        // this is a bit of workaround: it should be possible to add clearValue by itself, but there seems to be a parsing bug on the server side that needs to be fixed first (TODO)
+		protectedString.getContent().add(toJaxbElement(TYPES_CLEAR_VALUE, clearValue));
+		return protectedString;
     }
 
     private static synchronized ModelPortType getModelPort() {
@@ -671,6 +755,13 @@ public class ModelPortWrapper {
         cxfEndpoint.getOutInterceptors().add(wssOut);
 
         return modelPort;
+    }
+    
+    public static ItemPathType createItemPathType(String stringPath) {
+        ItemPathType itemPathType = new ItemPathType();
+        String pathDeclaration = "declare default namespace '" + NS_COMMON + "'; " + stringPath;
+        itemPathType.setValue(pathDeclaration);
+        return itemPathType;
     }
     private static final ThreadLocal<DocumentBuilder> builderLocal = new ThreadLocal<DocumentBuilder>() {
         @Override

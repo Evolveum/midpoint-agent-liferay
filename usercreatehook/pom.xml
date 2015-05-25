@@ -133,7 +133,7 @@
 				</property>
 			</activation>
 			<properties>
-				<ws.endpoint.url>http://localhost:8080/midpoint/model/model-1</ws.endpoint.url>
+				<ws.endpoint.url>http://localhost:8080/midpoint/ws/model-3</ws.endpoint.url>
 				<ws.user>administrator</ws.user>
 				<ws.password>5ecr3t</ws.password>
 				<midpoint.password.min.unique.chars>3</midpoint.password.min.unique.chars>
@@ -149,7 +149,7 @@
 				</property>
 			</activation>
 			<properties>
-				<ws.endpoint.url>xxx/midpoint/model/model-1</ws.endpoint.url>
+				<ws.endpoint.url>xxx/midpoint/ws/model-3</ws.endpoint.url>
 				<ws.user>xxx</ws.user>
 				<ws.password>xxx</ws.password>
 				<midpoint.password.min.unique.chars>3</midpoint.password.min.unique.chars>
@@ -161,7 +161,20 @@
 	<properties>
 		<liferay.auto.deploy.dir>c:/apps/java/liferay-portal-6.1.1-ce-ga2/deploy</liferay.auto.deploy.dir>
 		<liferay.version>6.1.1</liferay.version>
-		<cxf.version>2.4.3</cxf.version>
-		<midpoint.model-client.version>2.2-SNAPSHOT</midpoint.model-client.version>
+		<cxf.version>3.0.1.e3</cxf.version>
+		<midpoint.model-client.version>3.1.1</midpoint.model-client.version>
 	</properties>
+	
+	<repositories>
+		<repository>
+			<id>evolveum</id>
+			<name>Evolveum Public Releases</name>
+			<url>http://nexus.evolveum.com/nexus/content/groups/public</url>
+		</repository>
+		<repository>
+			<id>evolveum-snapshots</id>
+			<name>Evolveum Snapshots</name>
+			<url>http://nexus.evolveum.com/nexus/content/repositories/snapshots/</url>
+		</repository>
+	</repositories>
 </project>

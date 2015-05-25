@@ -15,9 +15,9 @@ import javax.xml.namespace.QName;
 
 import org.apache.commons.lang.text.StrBuilder;
 
-import com.evolveum.midpoint.xml.ns._public.common.common_2a.CharacterClassType;
-import com.evolveum.midpoint.xml.ns._public.common.common_2a.LimitationsType;
-import com.evolveum.midpoint.xml.ns._public.common.common_2a.StringPolicyType;
+import com.evolveum.midpoint.xml.ns._public.common.common_3.CharacterClassType;
+import com.evolveum.midpoint.xml.ns._public.common.common_3.LimitationsType;
+import com.evolveum.midpoint.xml.ns._public.common.common_3.StringPolicyType;
 
 /**
  * @author mamut
