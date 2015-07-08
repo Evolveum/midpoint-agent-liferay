@@ -1,4 +1,19 @@
-package sk.eea.liferay.cvtilr.hook.service;
+/*
+ * Copyright (c) 2011-2015 EEA s.r.o., Evolveum
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.evolveum.liferay.usercreatehook.service;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -10,10 +25,9 @@ import javax.mail.internet.InternetAddress;
 
 import org.apache.commons.lang.StringUtils;
 
-import sk.eea.liferay.cvtilr.hook.exception.WSException;
-import sk.eea.liferay.cvtilr.hook.ws.ModelPortWrapper;
-import sk.eea.liferay.cvtilr.hook.ws.WSConfig;
-
+import com.evolveum.liferay.usercreatehook.exception.WSException;
+import com.evolveum.liferay.usercreatehook.ws.ModelPortWrapper;
+import com.evolveum.liferay.usercreatehook.ws.WSConfig;
 import com.liferay.mail.service.MailServiceUtil;
 import com.liferay.portal.UserPasswordException;
 import com.liferay.portal.kernel.exception.PortalException;
@@ -335,7 +349,7 @@ public class CustomUserLocalServiceImpl extends UserLocalServiceWrapper {
 
     protected static void checkPasswordValidity(String password) throws UserPasswordException {
         HashSet<String> tmp = new HashSet<String>(
-                sk.eea.liferay.cvtilr.hook.password.StringPolicyUtils.stringTokenizer(password));
+                com.evolveum.liferay.usercreatehook.password.StringPolicyUtils.stringTokenizer(password));
 
         boolean containsUpperCase = password.matches(".*\\p{javaLowerCase}.*");
         boolean containsLowerCase = password.matches(".*\\p{javaUpperCase}.*");
